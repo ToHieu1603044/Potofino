@@ -1,0 +1,47 @@
+  generator client {
+    provider = "prisma-client-js"
+    output   = "../../node_modules/.prisma/client-inventory"
+  }
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model InventoryStock {
+  id        String   @id @default(uuid())
+  skuId     String
+  skuCode   String   @unique
+  stock  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  StockLogs StockLog[]
+}
+
+model StockLog {
+  id             String   @id @default(uuid())
+  skuId          String
+  skuCode        String
+  type           StockLogType
+  stock       Int
+  beforeQuantity Int
+  afterQuantity  Int
+  referenceId    String? 
+  note           String?  
+  createdAt      DateTime @default(now())
+
+  InventoryStock InventoryStock? @relation(fields: [skuCode], references: [skuCode], onDelete: Cascade)
+
+  @@index([skuCode])
+  @@index([type])
+}
+
+enum StockLogType {
+  import
+  export
+  adjustment
+  rollback
+  order
+  flash_sale
+}

@@ -1,0 +1,89 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String
+  active     Boolean    @default(true)
+  deletedAt  DateTime?  // Soft delete
+  products  Product[] 
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  image     String?
+  active     Boolean    @default(true)
+  deletedAt  DateTime?  // Soft delete
+  parentId  String?     // thêm parentId
+
+  parent    Category?   @relation("CategoryToParent", fields: [parentId], references: [id])
+  children  Category[]  @relation("CategoryToParent")
+
+  products  Product[]
+}
+
+
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  brandId     String?
+  categoryId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  active     Boolean    @default(true)
+  deletedAt  DateTime?  // Soft delete
+  brand       Brand?    @relation(fields: [brandId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
+  skus        Sku[]
+}
+
+model Attribute {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  options     AttributeOption[]
+}
+
+model AttributeOption {
+  id           String     @id @default(uuid())
+  attributeId  String
+  value        String
+  skuOptions   SkuAttributeOption[]
+
+  attribute    Attribute  @relation(fields: [attributeId], references: [id])
+}
+
+model Sku {
+  id           String              @id @default(uuid())
+  productId    String
+  skuCode      String              @unique
+  price        Decimal             @db.Decimal(10, 2)
+  stock        Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  product      Product             @relation(fields: [productId], references: [id])
+  skuOptions   SkuAttributeOption[]
+
+}
+
+model SkuAttributeOption {
+  skuId           String
+  attributeOptionId String
+
+  sku             Sku             @relation(fields: [skuId], references: [id])
+  attributeOption AttributeOption @relation(fields: [attributeOptionId], references: [id])
+
+  @@id([skuId, attributeOptionId])
+}

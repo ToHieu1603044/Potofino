@@ -14,7 +14,16 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@auth-microservices/database": ["libs/database/src/index.ts"],
+      "@auth-microservices/shared/types": ["libs/shared/types/src/index.ts"],
+      "@constants/*": ["libs/constants/*"],
+      "@nestjsecm/common": ["libs/common/src/index.ts"],
+      "@nestjsecm/libs": ["libs/src/index.ts"],
+      "@prisma/client-auth": ["./apps/node_modules/.prisma/client-auth"],
+      "@proto/*": ["libs/proto/*"],
+      "rxjs": ["node_modules/rxjs"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

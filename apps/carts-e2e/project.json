@@ -1,0 +1,17 @@
+{
+  "name": "carts-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "implicitDependencies": ["carts"],
+  "projectType": "application",
+  "targets": {
+    "e2e": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{e2eProjectRoot}"],
+      "options": {
+        "jestConfig": "apps/carts-e2e/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "dependsOn": ["carts:build", "carts:serve"]
+    }
+  }
+}

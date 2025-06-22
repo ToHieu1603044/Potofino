@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package product;
+
+service ProductService {
+  rpc CreateProduct (CreateProductRequest) returns (CreateProductResponse);
+  rpc GetProduct (GetProductRequest) returns (GetProductResponse);
+  rpc GetProducts (GetAllProductsRequest) returns (GetAllProductsResponse);  
+  rpc ValidateSkuInputs (ValidateSkuInputRequest) returns (ValidateSkuInputResponse);
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  string brandId = 3;
+  string categoryId = 4;
+  repeated CreateSkuInput skus = 5;
+}
+
+message CreateSkuInput {
+  string skuCode = 1;
+  double price = 2;
+  int32 stock = 3;
+  repeated AttributeInput attributes = 4;
+}
+
+message CreateProductResponse {
+  string id = 1;
+  string name = 2;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message GetProductResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string brandId = 4;
+  string categoryId = 5;
+  repeated SkuResponse skus = 6;
+}
+
+message GetAllProductsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string keyword = 3;
+  string brandId = 4;
+  string categoryId = 5;
+  string sort = 6; 
+}
+
+message GetAllProductsResponse {
+  repeated GetProductResponse products = 1;
+  int32 total = 2;
+  int32 page = 3;        
+  int32 limit = 4;       
+  int32 totalPages = 5;  
+}
+
+message SkuResponse {
+  string id = 1;
+  string skuCode = 2;
+  double price = 3;
+  int32 stock = 4;
+  repeated SkuOptionResponse skuOptions = 5;
+}
+
+message AttributeInput {
+  string attributeOptionId = 1;
+}
+
+message SkuOptionResponse {
+  string attributeOptionId = 1;
+  string attributeOptionValue = 2;
+  AttributeDetail attribute = 3;
+}
+
+message AttributeDetail {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message SkuValidationInput {
+  string skuId = 1;
+  string skuCode = 2;
+  string productId = 3;
+}
+
+message ValidateSkuInputRequest {
+  repeated SkuValidationInput items = 1;
+}
+
+message ValidateSkuInputResponse {
+  bool valid = 1;
+  repeated string invalidSkuCodes = 2;
+}

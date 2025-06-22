@@ -38,7 +38,39 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/api-gateway-e2e/**/*"]
+      "exclude": [
+        "apps/api-gateway-e2e/**/*",
+        "apps/products-e2e/**/*",
+        "apps/inventory-e2e/**/*",
+        "apps/notifications-e2e/**/*",
+        "apps/auth-e2e/**/*",
+        "apps/users-e2e/**/*",
+        "apps/carts-e2e/**/*",
+        "apps/orders-e2e/**/*"
+      ]
     }
-  ]
+  ],
+  "targetDefaults": {
+    "build": {
+      "options": {
+        "assets": [
+          {
+            "glob": "*.proto",
+            "input": "libs/proto",
+            "output": "proto"
+          },
+          {
+            "glob": "**/*",
+            "input": "libs/utils",
+            "output": "libs/utils"
+          }
+        ]
+      }
+    },
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    }
+  }
 }
