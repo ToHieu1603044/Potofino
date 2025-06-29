@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../shared/prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 
 import { ProductEntity } from '../entities/product.entiti';
 import { Prisma, Product, Sku, SkuAttributeOption } from '@prisma/client';
 import { GetAllProductsResponse, GetProductResponse } from '@auth-microservices/shared/types';
 import { paginate, PAGINATION } from 'libs/utils/pagination';
-import { RedisService } from '../shared/redis/redis.service';
+import { RedisService } from '../../shared/redis/redis.service';
 import { ValidateSkuInputsDto } from '../dto/validate.sku.dto';
 
 @Injectable()

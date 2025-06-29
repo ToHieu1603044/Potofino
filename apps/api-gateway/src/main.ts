@@ -6,7 +6,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
-import { GrpcExceptionFilter } from './app/auth/rpc-exception.filter';
+import { GrpcExceptionFilter } from './app/rpc-exception.filter';
 // import { AllExceptionsFilter } from './app/auth/rpc-exception.filter';
 
 

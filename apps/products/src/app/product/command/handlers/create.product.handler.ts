@@ -1,8 +1,8 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CreateProductCommand } from '../create.produt.command';
 import { ProductRepository } from '../../repositories/product.repository';
-import { RedisService } from '../../shared/redis/redis.service';
-import { KafkaService } from '../../shared/kafka/kafka.service';
+import { RedisService } from '../../../shared/redis/redis.service';
+import { KafkaService } from '../../../shared/kafka/kafka.service';
 import { ProductEntity } from '../../entities/product.entiti';
 
 @CommandHandler(CreateProductCommand)

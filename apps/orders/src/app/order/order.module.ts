@@ -6,24 +6,25 @@ import { KafkaModule } from '../kafka/kafka.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { join } from 'path';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { INVENTORY_PACKAGE_NAME, PRODUCT_PACKAGE_NAME } from '@auth-microservices/shared/types';
 
 @Module({
   imports: [
     ClientsModule.register([
       {
-        name: 'product',
+        name: PRODUCT_PACKAGE_NAME,
         transport: Transport.GRPC,
         options: {
-          package: 'product',
+          package: PRODUCT_PACKAGE_NAME,
           protoPath: join(__dirname, 'proto/product.proto'),
           url:'localhost:50051',
         },
       },
       {
-        name: 'inventory',
+        name: INVENTORY_PACKAGE_NAME,
         transport: Transport.GRPC,
         options: {
-          package: 'inventory',
+          package: INVENTORY_PACKAGE_NAME,
           protoPath: join(__dirname, 'proto/inventory.proto'),
           url:'localhost:50071',
         },

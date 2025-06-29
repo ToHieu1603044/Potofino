@@ -10,6 +10,7 @@ import { KafkaService } from './kafka.service';
         transport: Transport.KAFKA,
         options: {
           client: {
+            clientId: 'inventory-service',
             brokers: ['localhost:9092'],
           },
           consumer: {

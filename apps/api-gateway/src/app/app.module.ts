@@ -8,17 +8,23 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { ProductController } from './product/product.controller';
 import { GrpcClientService } from './grpc/grpc-client.service';
-import { AuthController } from './auth/auth.controller';
-import { AuthService } from './auth/auth.service';
+// import { AuthController } from './auth/auth.controller';
+// import { AuthService } from './auth/auth.service';
 import { UserService } from './user/user.service';
 import { CART_PACKAGE_NAME, ORDER_PACKAGE_NAME, PRODUCT_PACKAGE_NAME, USER_PACKAGE_NAME } from '@auth-microservices/shared/types';
 import { UsersController } from './user/user.controller';
 import { ProductService } from './product/product.service';
 import { OrderController } from './order/order.controller';
 import { OrderService } from './order/order.service';
+import { AuthGrpcService } from './auth/auth.service';
+import { AuthController } from './auth/auth.controller';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+     ConfigModule.forRoot({
+      isGlobal: true, // Quan trọng nếu bạn không muốn import lại nhiều lần
+    }),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
@@ -72,7 +78,7 @@ import { OrderService } from './order/order.service';
         transport: Transport.GRPC,
         options: {
           url: 'localhost:50054',
-          package: 'user',
+          package: USER_PACKAGE_NAME,
           protoPath: join(__dirname, 'proto/user.proto'),
         },
       }
@@ -83,7 +89,7 @@ import { OrderService } from './order/order.service';
         transport: Transport.GRPC,
         options: {
           url: 'localhost:50060',
-          package: 'order',
+          package: ORDER_PACKAGE_NAME,
           protoPath: join(__dirname, 'proto/order.proto'),
         }
       }
@@ -95,7 +101,7 @@ import { OrderService } from './order/order.service';
     AppService,
     CartService,
     GrpcClientService, 
-    AuthService,
+    AuthGrpcService,
     ProductService,
     OrderService
   ],

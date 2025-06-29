@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { join } from 'path';
-import { PRODUCT_PACKAGE_NAME } from '@auth-microservices/shared/types';
+import { CATEGORY_PACKAGE_NAME, PRODUCT_PACKAGE_NAME } from '@auth-microservices/shared/types';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,9 +10,12 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.GRPC,
     options: {
-      package: PRODUCT_PACKAGE_NAME,
-      protoPath: join(__dirname, 'proto/product.proto'),
-      url: process.env.GRPC_PORT || 'localhost:50051', 
+      package: [PRODUCT_PACKAGE_NAME, CATEGORY_PACKAGE_NAME],
+      protoPath: [
+        join(__dirname, 'proto/product.proto'),
+        join(__dirname, 'proto/category.proto'),
+      ],
+      url: process.env.GRPC_PORT || 'localhost:50051',
     },
   });
 

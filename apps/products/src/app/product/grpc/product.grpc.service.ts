@@ -1,10 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
-import { PrismaService } from '../shared/prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateProductRequest, CreateProductResponse, GetAllProductsRequest, GetAllProductsResponse, GetProductRequest, GetProductResponse } from '@auth-microservices/shared/types';
 import { CreateProductDto } from '../dto/create.product.dto';
-import { RedisService } from '../shared/redis/redis.service';
-import { KafkaService } from '../shared/kafka/kafka.service';
+import { RedisService } from '../../shared/redis/redis.service';
+import { KafkaService } from '../../shared/kafka/kafka.service';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ProductRepository } from '../repositories/product.repository';
 import { CreateProductCommand } from '../command/create.produt.command';

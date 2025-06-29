@@ -1,82 +1,70 @@
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Client, ClientGrpc, Transport } from '@nestjs/microservices';
+import { join } from 'path';
 import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  OnModuleInit,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { ClientGrpc } from '@nestjs/microservices';
-import { lastValueFrom } from 'rxjs';
-import { RegisterDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
-import {
-  AUTH_SERVICE_NAME,
-  AuthServiceClient,
-  RegisterRequest,
-  LoginRequest,
-  RefreshTokenRequest,
-  LogoutRequest,
+  AuthServiceClient, AUTH_SERVICE_NAME,
+  RegisterRequest, LoginRequest, RefreshTokenRequest, ValidateTokenRequest, LogoutRequest,
+  CheckPermissionRequest, GetUserPermissionsRequest, CheckRoleRequest, GetUserRolesRequest,
+  AssignRoleToUserRequest, RemoveRoleFromUserRequest,
+  AssignPermissionToRoleRequest, RemovePermissionFromRoleRequest,
+  CreateRoleRequest, UpdateRoleRequest, DeleteRoleRequest, GetAllRolesRequest,
+  CreatePermissionRequest, UpdatePermissionRequest, DeletePermissionRequest, GetAllPermissionsRequest,
 } from '@auth-microservices/shared/types';
+import { Observable } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class AuthService implements OnModuleInit {
-  private authClient: AuthServiceClient;
+export class AuthGrpcService implements OnModuleInit {
+  @Client({
+    transport: Transport.GRPC,
+    options: {
+      package: 'auth',
+      protoPath: join(__dirname, 'proto/auth.proto'),
+      url: process.env.AUTH_SERVICE_GRPC_URL || 'localhost:50054',
+    },
+  })
+  private client: ClientGrpc;
 
-  constructor(@Inject('AUTH_PACKAGE') private client: ClientGrpc) {}
+  private authService: AuthServiceClient;
+
+  constructor(private configService: ConfigService) {}
 
   onModuleInit() {
-    this.authClient = this.client.getService<AuthServiceClient>(AUTH_SERVICE_NAME);
+    this.authService = this.client.getService<AuthServiceClient>(AUTH_SERVICE_NAME);
   }
 
-  async register(dto: RegisterDto) {
-    const request: RegisterRequest = {
-      name: dto.name,
-      email: dto.email,
-      phone: dto.phone || '',
-      password: dto.password,
-    };
+  // --- Authentication Calls ---
+  register(data: RegisterRequest) { return this.authService.register(data); }
+  login(data: LoginRequest) { return this.authService.login(data); }
+  refreshToken(data: RefreshTokenRequest) { return this.authService.refreshToken(data); }
+  validateToken(data: ValidateTokenRequest): Observable<any> { return this.authService.validateToken(data); }
+  logout(data: LogoutRequest) { return this.authService.logout(data); }
 
-    try {
-      return await lastValueFrom(this.authClient.register(request));
-    } catch (error) {
-      throw new InternalServerErrorException(error.message || 'Đăng ký thất bại');
-    }
-  }
+  // --- Authorization Calls (AuthZ) ---
+  checkPermission(data: CheckPermissionRequest): Observable<any> { return this.authService.checkPermission(data); }
+  getUserPermissions(data: GetUserPermissionsRequest): Observable<any> { return this.authService.getUserPermissions(data); }
+  checkRole(data: CheckRoleRequest): Observable<any> { return this.authService.checkRole(data); }
+  getUserRoles(data: GetUserRolesRequest): Observable<any> { return this.authService.getUserRoles(data); }
 
-  async login(dto: LoginDto) {
-    const request: LoginRequest = {
-      email: dto.email,
-      password: dto.password,
-    };
+  // --- Management Calls (Admin-facing APIs for AuthZ) ---
 
-    try {
-      return await lastValueFrom(this.authClient.login(request));
-    } catch (error) {
-      if (error.code === 16 || error.message?.includes('Invalid credentials')) {
-        throw new UnauthorizedException('Sai email hoặc mật khẩu');
-      }
-      throw new InternalServerErrorException(error.message || 'Đăng nhập thất bại');
-    }
-  }
+  // User-Role Management
+  assignRoleToUser(data: AssignRoleToUserRequest) { return this.authService.assignRoleToUser(data); }
+  removeRoleFromUser(data: RemoveRoleFromUserRequest) { return this.authService.removeRoleFromUser(data); }
 
-  async refreshToken(dto: RefreshTokenDto) {
-    const request: RefreshTokenRequest = {
-      refreshToken: dto.refreshToken,
-    };
+  // Role-Permission Management
+  assignPermissionToRole(data: AssignPermissionToRoleRequest) { return this.authService.assignPermissionToRole(data); }
+  removePermissionFromRole(data: RemovePermissionFromRoleRequest) { return this.authService.removePermissionFromRole(data); }
 
-    try {
-      return await lastValueFrom(this.authClient.refreshToken(request));
-    } catch (error) {
-      throw new InternalServerErrorException(error.message || 'Làm mới token thất bại');
-    }
-  }
+  // Role CRUD
+  createRole(data: CreateRoleRequest) { return this.authService.createRole(data); }
+  updateRole(data: UpdateRoleRequest) { return this.authService.updateRole(data); }
+  deleteRole(data: DeleteRoleRequest) { return this.authService.deleteRole(data); }
+  getAllRoles(data: GetAllRolesRequest) { return this.authService.getAllRoles(data); }
 
-  async logout(userId: string, refreshToken: string) {
-    const request: LogoutRequest = { userId, refreshToken };
-
-    try {
-      return await lastValueFrom(this.authClient.logout(request));
-    } catch (error) {
-      throw new InternalServerErrorException(error.message || 'Đăng xuất thất bại');
-    }
-  }
+  // Permission CRUD
+  createPermission(data: CreatePermissionRequest) { return this.authService.createPermission(data); }
+  updatePermission(data: UpdatePermissionRequest) { return this.authService.updatePermission(data); }
+  deletePermission(data: DeletePermissionRequest) { return this.authService.deletePermission(data); }
+  getAllPermissions(data: GetAllPermissionsRequest) { return this.authService.getAllPermissions(data); }
 }

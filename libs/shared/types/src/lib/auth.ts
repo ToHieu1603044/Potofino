@@ -10,6 +10,7 @@ import { Observable } from "rxjs";
 
 export const protobufPackage = "auth";
 
+/** Authentication */
 export interface RegisterRequest {
   name: string;
   email: string;
@@ -26,42 +27,197 @@ export interface RefreshTokenRequest {
   refreshToken: string;
 }
 
-export interface LogoutRequest {
-  userId: string;
+export interface AuthResponse {
+  accessToken: string;
   refreshToken: string;
+  userId: string;
 }
 
 export interface ValidateTokenRequest {
-  token: string;
+  accessToken: string;
 }
 
 export interface ValidateTokenResponse {
-  valid: boolean;
   userId: string;
   email: string;
-  message: string;
+  isValid: boolean;
 }
 
-export interface AuthResponse {
-  success: boolean;
-  message: string;
-  accessToken: string;
+export interface LogoutRequest {
   refreshToken: string;
-  user: User | undefined;
 }
 
 export interface LogoutResponse {
   success: boolean;
-  message: string;
 }
 
-export interface User {
+/** Authorization */
+export interface CheckPermissionRequest {
+  userId: string;
+  resource: string;
+  action: string;
+}
+
+export interface CheckPermissionResponse {
+  hasPermission: boolean;
+}
+
+export interface Permission {
   id: string;
   name: string;
-  email: string;
-  phone: string;
-  createdAt: string;
-  updatedAt: string;
+  resource: string;
+  action: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface GetUserPermissionsRequest {
+  userId: string;
+}
+
+export interface GetUserPermissionsResponse {
+  permissions: Permission[];
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+  isSystem: boolean;
+}
+
+export interface CheckRoleRequest {
+  userId: string;
+  roleNames: string[];
+  requireAll: boolean;
+}
+
+export interface CheckRoleResponse {
+  hasRole: boolean;
+}
+
+export interface GetUserRolesRequest {
+  userId: string;
+}
+
+export interface GetUserRolesResponse {
+  roles: Role[];
+}
+
+/** Role Management */
+export interface AssignRoleToUserRequest {
+  userId: string;
+  roleId: string;
+  assignedBy: string;
+  expiresAt: string;
+}
+
+export interface AssignRoleToUserResponse {
+  userRoleId: string;
+}
+
+export interface RemoveRoleFromUserRequest {
+  userId: string;
+  roleId: string;
+}
+
+export interface RemoveRoleFromUserResponse {
+  success: boolean;
+}
+
+export interface AssignPermissionToRoleRequest {
+  roleId: string;
+  permissionId: string;
+}
+
+export interface AssignPermissionToRoleResponse {
+  rolePermissionId: string;
+}
+
+export interface RemovePermissionFromRoleRequest {
+  roleId: string;
+  permissionId: string;
+}
+
+export interface RemovePermissionFromRoleResponse {
+  success: boolean;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+  isSystem: boolean;
+}
+
+export interface RoleResponse {
+  role: Role | undefined;
+}
+
+export interface UpdateRoleRequest {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface DeleteRoleRequest {
+  id: string;
+}
+
+export interface DeleteRoleResponse {
+  success: boolean;
+}
+
+export interface GetAllRolesRequest {
+}
+
+export interface GetAllRolesResponse {
+  roles: Role[];
+}
+
+/** Permission Management */
+export interface CreatePermissionRequest {
+  name: string;
+  resource: string;
+  action: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface PermissionResponse {
+  permission: Permission | undefined;
+}
+
+export interface UpdatePermissionRequest {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  displayName: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface DeletePermissionRequest {
+  id: string;
+}
+
+export interface DeletePermissionResponse {
+  success: boolean;
+}
+
+export interface GetAllPermissionsRequest {
+}
+
+export interface GetAllPermissionsResponse {
+  permissions: Permission[];
 }
 
 export const AUTH_PACKAGE_NAME = "auth";
@@ -73,9 +229,41 @@ export interface AuthServiceClient {
 
   refreshToken(request: RefreshTokenRequest): Observable<AuthResponse>;
 
+  validateToken(request: ValidateTokenRequest): Observable<ValidateTokenResponse>;
+
   logout(request: LogoutRequest): Observable<LogoutResponse>;
 
-  validateToken(request: ValidateTokenRequest): Observable<ValidateTokenResponse>;
+  checkPermission(request: CheckPermissionRequest): Observable<CheckPermissionResponse>;
+
+  getUserPermissions(request: GetUserPermissionsRequest): Observable<GetUserPermissionsResponse>;
+
+  checkRole(request: CheckRoleRequest): Observable<CheckRoleResponse>;
+
+  getUserRoles(request: GetUserRolesRequest): Observable<GetUserRolesResponse>;
+
+  assignRoleToUser(request: AssignRoleToUserRequest): Observable<AssignRoleToUserResponse>;
+
+  removeRoleFromUser(request: RemoveRoleFromUserRequest): Observable<RemoveRoleFromUserResponse>;
+
+  assignPermissionToRole(request: AssignPermissionToRoleRequest): Observable<AssignPermissionToRoleResponse>;
+
+  removePermissionFromRole(request: RemovePermissionFromRoleRequest): Observable<RemovePermissionFromRoleResponse>;
+
+  createRole(request: CreateRoleRequest): Observable<RoleResponse>;
+
+  updateRole(request: UpdateRoleRequest): Observable<RoleResponse>;
+
+  deleteRole(request: DeleteRoleRequest): Observable<DeleteRoleResponse>;
+
+  getAllRoles(request: GetAllRolesRequest): Observable<GetAllRolesResponse>;
+
+  createPermission(request: CreatePermissionRequest): Observable<PermissionResponse>;
+
+  updatePermission(request: UpdatePermissionRequest): Observable<PermissionResponse>;
+
+  deletePermission(request: DeletePermissionRequest): Observable<DeletePermissionResponse>;
+
+  getAllPermissions(request: GetAllPermissionsRequest): Observable<GetAllPermissionsResponse>;
 }
 
 export interface AuthServiceController {
@@ -85,16 +273,102 @@ export interface AuthServiceController {
 
   refreshToken(request: RefreshTokenRequest): Promise<AuthResponse> | Observable<AuthResponse> | AuthResponse;
 
-  logout(request: LogoutRequest): Promise<LogoutResponse> | Observable<LogoutResponse> | LogoutResponse;
-
   validateToken(
     request: ValidateTokenRequest,
   ): Promise<ValidateTokenResponse> | Observable<ValidateTokenResponse> | ValidateTokenResponse;
+
+  logout(request: LogoutRequest): Promise<LogoutResponse> | Observable<LogoutResponse> | LogoutResponse;
+
+  checkPermission(
+    request: CheckPermissionRequest,
+  ): Promise<CheckPermissionResponse> | Observable<CheckPermissionResponse> | CheckPermissionResponse;
+
+  getUserPermissions(
+    request: GetUserPermissionsRequest,
+  ): Promise<GetUserPermissionsResponse> | Observable<GetUserPermissionsResponse> | GetUserPermissionsResponse;
+
+  checkRole(request: CheckRoleRequest): Promise<CheckRoleResponse> | Observable<CheckRoleResponse> | CheckRoleResponse;
+
+  getUserRoles(
+    request: GetUserRolesRequest,
+  ): Promise<GetUserRolesResponse> | Observable<GetUserRolesResponse> | GetUserRolesResponse;
+
+  assignRoleToUser(
+    request: AssignRoleToUserRequest,
+  ): Promise<AssignRoleToUserResponse> | Observable<AssignRoleToUserResponse> | AssignRoleToUserResponse;
+
+  removeRoleFromUser(
+    request: RemoveRoleFromUserRequest,
+  ): Promise<RemoveRoleFromUserResponse> | Observable<RemoveRoleFromUserResponse> | RemoveRoleFromUserResponse;
+
+  assignPermissionToRole(
+    request: AssignPermissionToRoleRequest,
+  ):
+    | Promise<AssignPermissionToRoleResponse>
+    | Observable<AssignPermissionToRoleResponse>
+    | AssignPermissionToRoleResponse;
+
+  removePermissionFromRole(
+    request: RemovePermissionFromRoleRequest,
+  ):
+    | Promise<RemovePermissionFromRoleResponse>
+    | Observable<RemovePermissionFromRoleResponse>
+    | RemovePermissionFromRoleResponse;
+
+  createRole(request: CreateRoleRequest): Promise<RoleResponse> | Observable<RoleResponse> | RoleResponse;
+
+  updateRole(request: UpdateRoleRequest): Promise<RoleResponse> | Observable<RoleResponse> | RoleResponse;
+
+  deleteRole(
+    request: DeleteRoleRequest,
+  ): Promise<DeleteRoleResponse> | Observable<DeleteRoleResponse> | DeleteRoleResponse;
+
+  getAllRoles(
+    request: GetAllRolesRequest,
+  ): Promise<GetAllRolesResponse> | Observable<GetAllRolesResponse> | GetAllRolesResponse;
+
+  createPermission(
+    request: CreatePermissionRequest,
+  ): Promise<PermissionResponse> | Observable<PermissionResponse> | PermissionResponse;
+
+  updatePermission(
+    request: UpdatePermissionRequest,
+  ): Promise<PermissionResponse> | Observable<PermissionResponse> | PermissionResponse;
+
+  deletePermission(
+    request: DeletePermissionRequest,
+  ): Promise<DeletePermissionResponse> | Observable<DeletePermissionResponse> | DeletePermissionResponse;
+
+  getAllPermissions(
+    request: GetAllPermissionsRequest,
+  ): Promise<GetAllPermissionsResponse> | Observable<GetAllPermissionsResponse> | GetAllPermissionsResponse;
 }
 
 export function AuthServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["register", "login", "refreshToken", "logout", "validateToken"];
+    const grpcMethods: string[] = [
+      "register",
+      "login",
+      "refreshToken",
+      "validateToken",
+      "logout",
+      "checkPermission",
+      "getUserPermissions",
+      "checkRole",
+      "getUserRoles",
+      "assignRoleToUser",
+      "removeRoleFromUser",
+      "assignPermissionToRole",
+      "removePermissionFromRole",
+      "createRole",
+      "updateRole",
+      "deleteRole",
+      "getAllRoles",
+      "createPermission",
+      "updatePermission",
+      "deletePermission",
+      "getAllPermissions",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("AuthService", method)(constructor.prototype[method], method, descriptor);

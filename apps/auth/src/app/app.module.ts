@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
 import { KafkaService } from './kafka/kafka.service';
+import { CqrsModule } from '@nestjs/cqrs';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { KafkaService } from './kafka/kafka.service';
       secret: 'your-secret-key',
       signOptions: { expiresIn: '1h' },
     }),
+     CqrsModule,
     AuthModule,
     PrismaModule
   ],

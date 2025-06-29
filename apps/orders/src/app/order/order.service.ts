@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { KafkaService } from '../kafka/kafka.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,20 +16,23 @@ import {
   INVENTORY_SERVICE_NAME,
   ValidateSkuInputRequest,
   CheckStockRequest,
+  INVENTORY_PACKAGE_NAME,
+  PRODUCT_PACKAGE_NAME,
 } from '@auth-microservices/shared/types';
 import { ClientGrpc, RpcException } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
 import { status } from '@grpc/grpc-js';
 @Injectable()
 export class OrderService implements OnModuleInit {
+  private readonly logger = new Logger(OrderService.name);
   private productSvc: ProductServiceClient;
   private inventorySvc: InventoryServiceClient;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly kafkaService: KafkaService,
-    @Inject('product') private readonly productClient: ClientGrpc,
-    @Inject('inventory') private readonly inventoryClient: ClientGrpc,
+    @Inject(PRODUCT_PACKAGE_NAME) private readonly productClient: ClientGrpc,
+    @Inject(INVENTORY_PACKAGE_NAME) private readonly inventoryClient: ClientGrpc,
   ) { }
 
   onModuleInit() {
@@ -40,7 +43,6 @@ export class OrderService implements OnModuleInit {
   async createOrder(data: CreateOrderRequest): Promise<OrderResponse> {
     const { userId, items, ...info } = data;
 
-    // 1. Kiểm tra đầu vào
     if (!Array.isArray(items) || items.length === 0) {
       throw new RpcException({
         code: status.INVALID_ARGUMENT,
@@ -48,10 +50,13 @@ export class OrderService implements OnModuleInit {
       });
     }
 
-    // 2. Validate SKU từ Product Service
     const validateRes = await lastValueFrom(
       this.productSvc.validateSkuInputs({
-        items: items.map(({ skuId, skuCode, productId }) => ({ skuId, skuCode, productId })),
+        items: items.map(i => ({
+          productId: i.productId,
+          skuId: i.skuId,
+          skuCode: i.skuCode,
+        })),
       }),
     );
 
@@ -62,79 +67,63 @@ export class OrderService implements OnModuleInit {
       });
     }
 
-    // 3. Check tồn kho từ Inventory Service
-    const checkStockRes = await lastValueFrom(
-      this.inventorySvc.checkStock({
-        skuCodes: items.map(i => i.skuCode),
+    await lastValueFrom(
+      this.inventorySvc.reserveStock({
+        items: items.map(i => ({
+          skuCode: i.skuCode,
+          quantity: i.quantity,
+        })),
       }),
     );
 
-    const stockItems = checkStockRes.items ?? [];
+    const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    if (stockItems.length !== items.length) {
-      const foundSkuCodes = new Set(stockItems.map(i => i.skuCode));
-      const notFound = items
-        .map(i => i.skuCode)
-        .filter(code => !foundSkuCodes.has(code));
+    let order;
+    try {
 
+      order = await this.prisma.order.create({
+        data: {
+          ...info,
+          userId,
+          code: `ORD-${uuidv4()}`,
+          totalAmount: new Prisma.Decimal(totalAmount),
+          shippingFee: new Prisma.Decimal(info.shippingFee),
+          discount: info.discount ? new Prisma.Decimal(info.discount) : new Prisma.Decimal(0),
+          status: 'pending',
+          paymentStatus: 'unpaid',
+          orderDetails: {
+            create: items.map(item => ({
+              skuId: item.skuId,
+              productId: item.productId,
+              skuCode: item.skuCode,
+              productName: item.productName,
+              productImage: item.productImage,
+              quantity: item.quantity,
+              price: new Prisma.Decimal(item.price),
+              totalPrice: new Prisma.Decimal(item.price * item.quantity),
+            })),
+          },
+        },
+        include: {
+          orderDetails: true,
+        },
+      });
+    } catch (err) {
+
+      this.logger.error('Failed to create order', err);
       throw new RpcException({
-        code: status.INVALID_ARGUMENT,
-        message: `Stock not found for SKU(s): ${notFound.join(', ')}`,
+        code: status.INTERNAL,
+        message: 'Failed to create order in DB',
       });
     }
 
-    // 4. Kiểm tra từng SKU có đủ tồn kho không
-    const stockMap = new Map(stockItems.map(({ skuCode, stock }) => [skuCode, stock]));
-
-    for (const item of items) {
-      const available = stockMap.get(item.skuCode);
-      if (available == null || available < item.quantity) {
-        throw new RpcException({
-          code: status.FAILED_PRECONDITION,
-          message: `Out of stock for SKU: ${item.skuCode}`,
-        });
-      }
-    }
-
-    // 5. Tính tổng tiền đơn hàng
-    const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-    // 6. Tạo đơn hàng trong DB
-    const order = await this.prisma.order.create({
-      data: {
-        ...info,
-        userId,
-        code: `ORD-${uuidv4()}`,
-        totalAmount: new Prisma.Decimal(totalAmount),
-        shippingFee: new Prisma.Decimal(info.shippingFee),
-        discount: info.discount ? new Prisma.Decimal(info.discount) : new Prisma.Decimal(0),
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        orderDetails: {
-          create: items.map(item => ({
-            skuId: item.skuId,
-            productId: item.productId,
-            skuCode: item.skuCode,
-            productName: item.productName,
-            productImage: item.productImage,
-            quantity: item.quantity,
-            price: new Prisma.Decimal(item.price),
-            totalPrice: new Prisma.Decimal(item.price * item.quantity),
-          })),
-        },
-      },
-      include: {
-        orderDetails: true,
-      },
-    });
-
-    // 7. Gửi Kafka để xóa giỏ hàng
-    await this.kafkaService.emit('cart.clear.items', {
-      userId,
-      skuIds: items.map(i => i.skuId),
-    });
-
-    // 8. Trả kết quả đơn hàng
+    await Promise.all([
+      this.kafkaService.emit('order.created', {
+        source: 'order-service',
+        reason: 'order_created',
+        skuCodes: items.map(i => i.skuCode),
+      }),
+    ]);
     return this.toOrderResponse(order);
   }
 

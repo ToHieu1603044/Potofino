@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { join } from 'path';
 import { AppModule } from './app/app.module';
+import { RpcExceptionToRpcErrorFilter } from './app/auth/infrastructure/common/exceptions/rpc-exception.filter';
 
 async function bootstrap() {
  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -19,7 +20,7 @@ async function bootstrap() {
   },
 );
 
-
+//  app.useGlobalFilters(new RpcExceptionToRpcErrorFilter())
   await app.listen();
   console.log('Auth Service is running on port 50054');
 }

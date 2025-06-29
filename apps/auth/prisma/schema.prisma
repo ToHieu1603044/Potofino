@@ -1,29 +1,111 @@
-  generator client {
-    provider = "prisma-client-js"
-    output   = "../../node_modules/.prisma/client-auth"
-  }
+// libs/prisma-client/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client-auth"
+}
 
-  datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-  }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-  model User {
-    id         String    @id @default(uuid())
-    name       String
-    email      String    @unique
-    phone      String?   @unique
-    password   String
-    createdAt  DateTime  @default(now())
-    updatedAt  DateTime  @updatedAt
-    refreshTokens RefreshToken[]
-  }
+model User {
+  id           String         @id @default(uuid())
+  name        String
+  firstName         String?
+  lastName          String?
+  email        String?         @unique
+  phone        String?        @unique
+  password     String
+  isActive     Boolean        @default(true) // Người dùng có hoạt động không
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+  userRoles    UserRole[]
 
-  model RefreshToken {
-    id        String   @id @default(uuid())
-    token     String   @unique
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    expiresAt DateTime
-    createdAt DateTime @default(now())
-  }
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Role {
+  id             String           @id @default(uuid())
+  name           String           @unique // admin, user, moderator, etc.
+  displayName    String           // Admin, User, Moderator
+  description    String?
+  isActive       Boolean          @default(true) // Vai trò có hoạt động không
+  isSystem       Boolean          @default(false) // Vai trò hệ thống không thể xóa
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  userRoles      UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id            String           @id @default(uuid())
+  name          String           @unique // user:read, user:write, post:delete, etc.
+  resource      String           // user, post, comment, etc.
+  action        String           // read, write, delete, create, update
+  displayName   String           // Read Users, Write Users, etc.
+  description   String?
+  isActive      Boolean          @default(true) // Quyền có hoạt động không
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id          String    @id @default(uuid())
+  userId      String
+  roleId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedAt  DateTime  @default(now())
+  assignedBy  String?   // ID of user who assigned this role
+  expiresAt   DateTime? // Optional: for temporary role assignments
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Optional: For audit logging
+model AuditLog {
+  id         String    @id @default(uuid())
+  userId     String?   // Who performed the action (có thể null nếu hành động tự động)
+  action     String    // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, ASSIGN_ROLE, REMOVE_ROLE, ASSIGN_PERMISSION, REMOVE_PERMISSION
+  resource   String    // user, role, permission
+  resourceId String?   // ID of the affected resource
+  oldValues  Json?     // Previous values (for updates)
+  newValues  Json?     // New values
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@map("audit_logs")
+}

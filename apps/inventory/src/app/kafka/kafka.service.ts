@@ -21,4 +21,5 @@ export class KafkaService implements OnModuleInit {
   send<T = any>(topic: string, message: any) {
     return this.kafkaClient.send<T, any>(topic, message);
   }
+  
 }

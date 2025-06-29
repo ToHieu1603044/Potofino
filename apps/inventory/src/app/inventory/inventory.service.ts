@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CheckStockResponse, StockItem } from '@auth-microservices/shared/types';
-
+import { CheckStockResponse, StockItem, ReserveStockResponse, ReserveStockItem } from '@auth-microservices/shared/types';
+import { RpcException } from '@nestjs/microservices';
+import { status } from '@grpc/grpc-js';
+import { ReserveStockDto } from './dto/reserve.stock.dto';
 @Injectable()
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
@@ -105,4 +107,42 @@ export class InventoryService {
     return { items: results };
   }
 
+  async reserveStock(data: ReserveStockDto): Promise<ReserveStockResponse> {
+    console.log('reserveStockAtomic', data);
+    const items = data.items;
+
+    const keys = items.map(i => `sku_stock:${i.skuCode}`);
+    const args = items.map(i => i.quantity.toString());
+
+    const luaScript = `
+      for i = 1, #KEYS do
+      local stock = tonumber(redis.call("get", KEYS[i]))
+      local qty = tonumber(ARGV[i])
+      if not stock or stock < qty then
+      return "Out of stock for SKU: " .. string.sub(KEYS[i], 11)
+      end
+      end
+      for i = 1, #KEYS do
+      redis.call("decrby", KEYS[i], ARGV[i])
+      end
+      return "OK"
+      `;
+    const result = await this.redis.eval(luaScript, {
+      keys,
+      arguments: args,
+    });
+    console.log('Lua result:', result);
+
+    if (result !== 'OK') {
+      throw new RpcException({
+        code: status.FAILED_PRECONDITION,
+        message: result,
+      });
+    }
+
+    return {
+      success: true,
+      reservedSkuCodes: items.map(i => i.skuCode),
+    };
+  }
 }

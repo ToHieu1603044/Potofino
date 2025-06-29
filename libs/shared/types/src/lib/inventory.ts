@@ -23,21 +23,56 @@ export interface CheckStockResponse {
   items: StockItem[];
 }
 
+export interface ReserveStockRequest {
+  items: ReserveStockItem[];
+}
+
+export interface ReserveStockItem {
+  skuCode: string;
+  quantity: number;
+}
+
+export interface ReserveStockResponse {
+  success: boolean;
+  reservedSkuCodes: string[];
+}
+
+export interface SyncStockFromRedisRequest {
+  skuCodes: string[];
+}
+
+export interface SyncStockFromRedisResponse {
+  success: boolean;
+  syncedSkuCodes: string[];
+}
+
 export const INVENTORY_PACKAGE_NAME = "inventory";
 
 export interface InventoryServiceClient {
   checkStock(request: CheckStockRequest): Observable<CheckStockResponse>;
+
+  reserveStock(request: ReserveStockRequest): Observable<ReserveStockResponse>;
+
+  syncStockFromRedis(request: SyncStockFromRedisRequest): Observable<SyncStockFromRedisResponse>;
 }
 
 export interface InventoryServiceController {
   checkStock(
     request: CheckStockRequest,
   ): Promise<CheckStockResponse> | Observable<CheckStockResponse> | CheckStockResponse;
+
+  reserveStock(
+    request: ReserveStockRequest,
+  ): Promise<ReserveStockResponse> | Observable<ReserveStockResponse> | ReserveStockResponse;
+
+  syncStockFromRedis(
+    request: SyncStockFromRedisRequest,
+  ): Promise<SyncStockFromRedisResponse> | Observable<SyncStockFromRedisResponse> | SyncStockFromRedisResponse;
 }
 
 export function InventoryServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["checkStock"];
+    const grpcMethods: string[] = ["checkStock", "reserveStock", "syncStockFromRedis"];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("InventoryService", method)(constructor.prototype[method], method, descriptor);
